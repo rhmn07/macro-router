@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+
+    // Profile + targets, and the user's own pantry.
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+      match /pantry/{ingredientId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // Generated plans are top-level (PRD schema) and owned via the uid field.
+    match /generated_plans/{planId} {
+      allow read, delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // Optional shared ingredient catalog (read-only to clients).
+    match /ingredients/{ingredientId} {
+      allow read: if signedIn();
+    }
+  }
+}

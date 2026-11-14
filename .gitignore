@@ -1,0 +1,17 @@
+# Xcode / generated
+*.xcodeproj/
+*.xcworkspace/
+!Packages/**/*.xcworkspace/
+MacroRouter/Info.plist
+DerivedData/
+build/
+.build/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+# Secrets
+Config/Secrets.xcconfig
+GoogleService-Info.plist
+
+.DS_Store

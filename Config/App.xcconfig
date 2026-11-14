@@ -1,0 +1,8 @@
+// Shared build settings. Put your personal values in Config/Secrets.xcconfig (git-ignored);
+// copy Config/Secrets.example.xcconfig to get started.
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.macrorouter
+DEVELOPMENT_TEAM =
+USDA_API_KEY = DEMO_KEY
+
+#include? "Secrets.xcconfig"
