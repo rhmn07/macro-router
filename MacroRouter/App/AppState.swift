@@ -157,7 +157,7 @@ final class AppState {
     func delete(_ plan: MealPlan) {
         data.plans.removeAll { $0.id == plan.id }
         persist()
-        cloudWrite { try await $0.deletePlan(id: plan.id) }
+        cloudWrite { cloud, _ in try await cloud.deletePlan(id: plan.id) }
     }
 
     // MARK: - Persistence
