@@ -12,10 +12,24 @@ struct UserData: Codable, Equatable {
     var profile: BodyProfile?
     /// Set once the user finishes or skips onboarding.
     var onboardingDone: Bool?
+    // Added later; optional so older saved data still decodes. Use the AppState accessors.
+    var currentWeek: WeekPlan?
+    var savedWeeks: [WeekPlan]?
+    var settings: PlannerSettings?
+    var weights: [WeightEntry]?
+    var reminders: ReminderSettings?
+}
+
+/// Meal reminder times, in minutes after midnight.
+struct ReminderSettings: Codable, Equatable {
+    var enabled = false
+    var times: [MealSlot: Int] = [.breakfast: 8 * 60, .lunch: 12 * 60 + 30, .snack: 15 * 60 + 30, .dinner: 18 * 60 + 30]
+
+    func minutes(for slot: MealSlot) -> Int { times[slot] ?? 12 * 60 }
 }
 
 enum AppTab: Hashable {
-    case targets, pantry, plan, history
+    case targets, pantry, plan, progress, history
 }
 
 @Observable
@@ -27,7 +41,6 @@ final class AppState {
     private let local = LocalStore()
 
     private(set) var data = UserData()
-    var currentPlan: MealPlan?
     var selectedTab: AppTab = .targets
     var errorMessage: String?
     var isLoading = false
@@ -57,11 +70,15 @@ final class AppState {
         data.pantry.filter { data.selectedIDs.contains($0.id) }
     }
 
+    var settings: PlannerSettings { data.settings ?? PlannerSettings() }
+    var weights: [WeightEntry] { (data.weights ?? []).sorted { $0.date < $1.date } }
+    var reminders: ReminderSettings { data.reminders ?? ReminderSettings() }
+    var savedWeeks: [WeekPlan] { data.savedWeeks ?? [] }
+
     // MARK: - Session
 
     private func userDidChange(_ user: AppUser?) async {
         profileSyncTask?.cancel()
-        currentPlan = nil
         guard let user else {
             userKey = "guest"
             data = local.load(key: userKey) ?? UserData()
@@ -154,30 +171,130 @@ final class AppState {
 
     // MARK: - Plans
 
+    /// Plans the next 7 days, starting today.
     func generatePlan() {
         do {
-            currentPlan = try MacroSolver.solve(ingredients: selectedIngredients, targets: data.targets)
+            data.currentWeek = try WeekPlan.make(ingredients: selectedIngredients, targets: data.targets,
+                                                 settings: settings, days: 7)
+            persist(profileChanged: true)
             selectedTab = .plan
+            Task { await rescheduleReminders() }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func isSaved(_ plan: MealPlan) -> Bool {
-        data.plans.contains { $0.id == plan.id }
+    /// Marks a meal as eaten (or not). Eaten meals stay fixed if the day is re-planned.
+    func toggleEaten(day: Int, slot: MealSlot) {
+        guard var week = data.currentWeek else { return }
+        let key = WeekPlan.key(day: day, slot: slot)
+        if week.eaten.contains(key) { week.eaten.remove(key) } else { week.eaten.insert(key) }
+        data.currentWeek = week
+        persist(profileChanged: true)
     }
 
-    func save(_ plan: MealPlan) {
-        guard !isSaved(plan) else { return }
-        data.plans.insert(plan, at: 0)
+    /// Re-plans one day without a food, keeping meals already eaten.
+    func swapOut(_ ingredient: Ingredient, day: Int) {
+        guard var week = data.currentWeek else { return }
+        let without = selectedIngredients.filter { $0.id != ingredient.id }
+        do {
+            try week.replan(day: day, ingredients: without)
+            data.currentWeek = week
+            persist(profileChanged: true)
+            Task { await rescheduleReminders() }
+        } catch {
+            errorMessage = "Couldn't re-plan without \(ingredient.shortName.lowercased()): \(error.localizedDescription)"
+        }
+    }
+
+    func isSaved(_ week: WeekPlan) -> Bool {
+        savedWeeks.contains { $0.id == week.id }
+    }
+
+    func save(_ week: WeekPlan) {
+        guard !isSaved(week) else { return }
+        data.savedWeeks = [week] + savedWeeks
         persist()
-        cloudWrite { try await $0.savePlan(uid: $1, plan: plan) }
+        cloudWrite { try await $0.saveWeek(uid: $1, week: week) }
     }
 
+    func delete(_ week: WeekPlan) {
+        data.savedWeeks = savedWeeks.filter { $0.id != week.id }
+        persist()
+        cloudWrite { cloud, _ in try await cloud.deletePlan(id: week.id) }
+    }
+
+    /// Old single-day plans saved before week plans existed.
     func delete(_ plan: MealPlan) {
         data.plans.removeAll { $0.id == plan.id }
         persist()
         cloudWrite { cloud, _ in try await cloud.deletePlan(id: plan.id) }
+    }
+
+    // MARK: - Preferences
+
+    func updateSettings(_ settings: PlannerSettings) {
+        guard settings != self.settings else { return }
+        data.settings = settings
+        persist(profileChanged: true)
+    }
+
+    func updateReminders(_ reminders: ReminderSettings) {
+        guard reminders != self.reminders else { return }
+        data.reminders = reminders
+        persist()
+        Task { await rescheduleReminders() }
+    }
+
+    func rescheduleReminders() async {
+        await ReminderService.schedule(week: data.currentWeek, settings: reminders)
+    }
+
+    // MARK: - Weight
+
+    func addWeight(_ entry: WeightEntry) {
+        data.weights = weights + [entry]
+        if var profile = data.profile, entry.date >= (weights.last?.date ?? .distantPast) {
+            profile.weightKg = entry.kg
+            data.profile = profile
+        }
+        persist(profileChanged: true)
+    }
+
+    func deleteWeight(_ entry: WeightEntry) {
+        data.weights = weights.filter { $0.id != entry.id }
+        persist(profileChanged: true)
+    }
+
+    /// Adds Apple Health weigh-ins that aren't already in the log (same day and weight).
+    func importHealthWeights() async {
+        do {
+            let fromHealth = try await HealthService.weights(days: 90)
+            let calendar = Calendar.current
+            let new = fromHealth.filter { h in
+                !weights.contains { calendar.isDate($0.date, inSameDayAs: h.date) && abs($0.kg - h.kg) < 0.05 }
+            }
+            guard !new.isEmpty else {
+                errorMessage = fromHealth.isEmpty ? "No weight found in Apple Health for the last 90 days." : nil
+                return
+            }
+            data.weights = weights + new
+            if var profile = data.profile, let latest = (weights).last {
+                profile.weightKg = latest.kg
+                data.profile = profile
+            }
+            persist(profileChanged: true)
+        } catch {
+            errorMessage = "Couldn't read Apple Health: \(error.localizedDescription)"
+        }
+    }
+
+    var checkIn: CalorieCheckIn? {
+        CalorieCheckIn.evaluate(entries: weights, goal: data.profile?.goal ?? .maintain)
+    }
+
+    func applyCheckIn(_ checkIn: CalorieCheckIn) {
+        updateTargets(data.targets.adjusted(byCalories: checkIn.calorieChange))
     }
 
     // MARK: - Persistence

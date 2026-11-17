@@ -27,19 +27,27 @@ public struct Ingredient: Codable, Hashable, Identifiable, Sendable {
     /// Optional portion limits for the daily recipe, in grams.
     public var minGrams: Double?
     public var maxGrams: Double?
+    /// Meals this food may appear in. Nil means "guess from the name" (see `suitableMeals`).
+    public var meals: [MealSlot]?
+    /// How the food is sold. Nil means "guess from the name" (see `packageSize`).
+    public var package: PackageSize?
 
     public init(id: String = UUID().uuidString,
                 name: String,
                 source: IngredientSource,
                 macrosPer100g: Macros,
                 minGrams: Double? = nil,
-                maxGrams: Double? = nil) {
+                maxGrams: Double? = nil,
+                meals: [MealSlot]? = nil,
+                package: PackageSize? = nil) {
         self.id = id
         self.name = name
         self.source = source
         self.macrosPer100g = macrosPer100g
         self.minGrams = minGrams
         self.maxGrams = maxGrams
+        self.meals = meals
+        self.package = package
     }
 
     /// The macro with the most grams, matching how people read a nutrition label.

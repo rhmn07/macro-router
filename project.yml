@@ -38,6 +38,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         USDA_API_KEY: $(USDA_API_KEY)
+        NSHealthShareUsageDescription: Macro Router reads your weight from Apple Health to track progress and suggest calorie changes.
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -45,6 +46,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
         OTHER_LDFLAGS: $(inherited) -ObjC
+        CODE_SIGN_ENTITLEMENTS: MacroRouter/MacroRouter.entitlements
     dependencies:
       - package: MacroCore
       - package: Firebase

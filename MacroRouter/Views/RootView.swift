@@ -48,6 +48,9 @@ struct MainTabView: View {
             CurrentPlanView()
                 .tabItem { Label("Plan", systemImage: "fork.knife") }
                 .tag(AppTab.plan)
+            ProgressTabView()
+                .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                .tag(AppTab.progress)
             HistoryView()
                 .tabItem { Label("History", systemImage: "clock.fill") }
                 .tag(AppTab.history)

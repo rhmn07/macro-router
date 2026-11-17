@@ -116,7 +116,7 @@ private struct GenerateBar: View {
         Button {
             app.generatePlan()
         } label: {
-            Label(count == 0 ? "Select foods to generate a plan" : "Generate plan · \(count) foods",
+            Label(count == 0 ? "Select foods to plan your week" : "Plan my week · \(count) foods",
                   systemImage: "wand.and.stars")
                 .contentTransition(.numericText())
         }

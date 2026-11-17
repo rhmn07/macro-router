@@ -33,6 +33,20 @@ struct TargetsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        PreferencesView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            IconBadge(symbol: "slider.horizontal.3", color: MacroKind.calories.color)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Plan preferences").foregroundStyle(Color(.label))
+                                Text(preferencesSummary).font(.caption).foregroundStyle(Color(.secondaryLabel))
+                            }
+                        }
+                    }
+                }
+
+                Section {
                     field(.calories, value: $targets.calories)
                     field(.protein, value: $targets.protein)
                     field(.carbs, value: $targets.carbs)
@@ -95,6 +109,15 @@ struct TargetsView: View {
                 if new.isValid { app.updateTargets(new) }
             }
         }
+    }
+
+    /// e.g. "3 meals + snack · Balanced · Vegetarian"
+    private var preferencesSummary: String {
+        let s = app.settings
+        var parts = ["\(s.slots.filter { $0 != .snack }.count) meals" + (s.includeSnack ? " + snack" : ""), s.mealSizes.displayName]
+        parts += s.diet.sorted { $0.rawValue < $1.rawValue }.map(\.displayName)
+        if app.reminders.enabled { parts.append("Reminders on") }
+        return parts.joined(separator: " · ")
     }
 
     /// e.g. "Lose weight · 80 kg · Moderately active"

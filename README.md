@@ -4,6 +4,12 @@ Tell it your daily macros and the foods you want to eat. It calculates the exact
 
 - **SwiftUI**, iOS 17+
 - **On-device optimizer** (`Packages/MacroCore`): box-constrained weighted least squares. Every macro is measured as relative error, and you can set optional min/max grams per food. It returns the best possible plan even when the selected foods can't hit the targets exactly, and reports which macros miss the ±5% margin.
+- **A week at a time**: plans 7 days; lunch and dinner proteins and carbs rotate from day to day. Tap "I ate it" after a meal to track today's calories, or swipe a food to drop it for that day and re-plan the rest.
+- **Preferences** (Targets > Plan preferences): breakfast on/off, afternoon snack, meal sizes, diet filters (vegetarian, pescatarian, no pork/beef, dairy-free, gluten-free) and meal reminders.
+- **Progress tab**: weigh-ins, trend chart, Apple Health import, and a calorie check-in after 2 weeks that suggests eating more or less.
+- **Meal names and cooking steps** built from each meal's foods, e.g. "Chicken breast & rice bowl with broccoli".
+- **Breakfast, lunch and dinner**: each meal is solved separately from foods that suit it (oats and eggs at breakfast, meat and rice later), lunch and dinner get different mains when there are enough foods, and every selected food is used. Override a food's meals in the food editor.
+- **Grocery list in packs**: "2 packs ground beef", "10 cans", "1 dozen", from typical US package sizes guessed from the food's name. Set your own size in the food editor.
 - **Guided setup**: on first launch it asks for goal (lose, maintain, gain), sex, age, height, weight and activity, then suggests daily targets (Mifflin-St Jeor) that the user can edit. Redo it anytime from Targets.
 - **Any food**: 7 pre-seeded staples, **USDA FoodData Central search**, or a **custom food** entered from a nutrition label.
 - **Firebase Auth + Firestore** (optional). Without a Firebase config the app runs in local-only mode.
@@ -67,7 +73,7 @@ On the first sign-in, data the user created in local mode is uploaded to the clo
 | Path | Fields |
 |---|---|
 | `users/{uid}` | `target_calories`, `target_protein`, `target_carbs`, `target_fats`, `selected_ingredient_ids`, `onboarding_done`, `body_profile {sex, age, height_cm, weight_kg, activity, goal, uses_metric}` |
-| `users/{uid}/pantry/{id}` | `name`, `source`, `macros_per_100g {protein, carbs, fat, calories}`, `min_grams`, `max_grams` |
+| `users/{uid}/pantry/{id}` | `name`, `source`, `macros_per_100g {protein, carbs, fat, calories}`, `min_grams`, `max_grams`, `meals`, `package {unit, grams}` |
 | `generated_plans/{plan_id}` | `plan_id`, `uid`, `daily_weights`, `achieved_macros`, `created_at`, `plan_json` |
 
 ## Project layout

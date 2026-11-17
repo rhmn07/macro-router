@@ -36,6 +36,22 @@ public struct MacroResult: Hashable, Identifiable, Sendable {
     }
 }
 
+/// One meal of a plan: which foods, how many grams of each.
+public struct PlannedMeal: Codable, Hashable, Identifiable, Sendable {
+    public var slot: MealSlot
+    /// Foods in this meal, heaviest first. Only foods with grams > 0.
+    public var items: [PlanItem]
+
+    public var id: MealSlot { slot }
+
+    public init(slot: MealSlot, items: [PlanItem]) {
+        self.slot = slot
+        self.items = items
+    }
+
+    public var macros: Macros { items.reduce(.zero) { $0 + $1.macros } }
+}
+
 public struct MealPlan: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var createdAt: Date
@@ -43,17 +59,21 @@ public struct MealPlan: Codable, Hashable, Identifiable, Sendable {
     /// Every selected ingredient, including ones the solver set to 0 g.
     public var items: [PlanItem]
     public var marginOfError: Double
+    /// Breakfast, lunch and dinner. Nil for plans saved before meals existed (daily totals only).
+    public var meals: [PlannedMeal]?
 
     public init(id: String = UUID().uuidString,
                 createdAt: Date = Date(),
                 targets: MacroTargets,
                 items: [PlanItem],
-                marginOfError: Double = 0.05) {
+                marginOfError: Double = 0.05,
+                meals: [PlannedMeal]? = nil) {
         self.id = id
         self.createdAt = createdAt
         self.targets = targets
         self.items = items
         self.marginOfError = marginOfError
+        self.meals = meals
     }
 
     /// Ingredients that actually appear in the recipe, heaviest first.
@@ -91,6 +111,15 @@ public struct MealPlan: Codable, Hashable, Identifiable, Sendable {
         var hints: [String] = []
         if tracksCalories && !targets.isConsistent(tolerance: marginOfError) {
             hints.append("Your macros add up to \(targets.impliedCalories) kcal but your calorie target is \(targets.calories) kcal. No combination of foods can hit both, so consider adjusting one of them.")
+        }
+        if let meals,
+           let lunch = meals.first(where: { $0.slot == .lunch }),
+           let dinner = meals.first(where: { $0.slot == .dinner }) {
+            let lunchMains = Set(lunch.items.filter { !$0.ingredient.isVegetable && $0.ingredient.category != .fat }.map(\.ingredient.id))
+            let dinnerMains = Set(dinner.items.filter { !$0.ingredient.isVegetable && $0.ingredient.category != .fat }.map(\.ingredient.id))
+            if !lunchMains.isEmpty && lunchMains == dinnerMains {
+                hints.append("Lunch and dinner use the same foods. Pick another protein or carb in the Pantry to make them different.")
+            }
         }
         for result in results where !result.isWithinMargin && result.kind != .calories {
             let amount = Int(abs(result.difference).rounded())

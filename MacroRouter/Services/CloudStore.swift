@@ -5,9 +5,12 @@ import MacroCore
 /// Firestore persistence, following the PRD schema:
 ///
 ///   users/{uid}                    target_calories, target_protein, target_carbs, target_fats, selected_ingredient_ids,
-///                                  onboarding_done, body_profile {sex, age, height_cm, weight_kg, activity, goal, uses_metric}
-///   users/{uid}/pantry/{id}        name, source, macros_per_100g {protein, carbs, fat, calories}, min_grams, max_grams
+///                                  onboarding_done, body_profile {sex, age, height_cm, weight_kg, activity, goal, uses_metric},
+///                                  settings_json, weights_json, current_week_json (JSON strings)
+///   users/{uid}/pantry/{id}        name, source, macros_per_100g {protein, carbs, fat, calories}, min_grams, max_grams,
+///                                  meals [breakfast|lunch|dinner], package {unit, grams}
 ///   generated_plans/{plan_id}      plan_id, uid, daily_weights, achieved_macros, created_at, plan_json
+///                                  (week plans: plan_id, uid, kind = "week", created_at, plan_json)
 final class CloudStore {
     private let db = Firestore.firestore()
 
@@ -45,11 +48,24 @@ final class CloudStore {
         let planDocs = try await plans.whereField("uid", isEqualTo: uid).getDocuments()
         let decoder = JSONDecoder()
         data.plans = planDocs.documents
+            .filter { ($0.data()["kind"] as? String) != "week" }
             .compactMap { doc -> MealPlan? in
                 guard let json = doc.data()["plan_json"] as? String else { return nil }
                 return try? decoder.decode(MealPlan.self, from: Data(json.utf8))
             }
             .sorted { $0.createdAt > $1.createdAt }
+        data.savedWeeks = planDocs.documents
+            .filter { ($0.data()["kind"] as? String) == "week" }
+            .compactMap { doc -> WeekPlan? in
+                guard let json = doc.data()["plan_json"] as? String else { return nil }
+                return try? decoder.decode(WeekPlan.self, from: Data(json.utf8))
+            }
+            .sorted { $0.createdAt > $1.createdAt }
+
+        // Settings, weigh-ins and the current week are stored as JSON on the user document.
+        data.settings = Self.decodeJSON(PlannerSettings.self, fields["settings_json"])
+        data.weights = Self.decodeJSON([WeightEntry].self, fields["weights_json"])
+        data.currentWeek = Self.decodeJSON(WeekPlan.self, fields["current_week_json"])
         return data
     }
 
@@ -59,6 +75,28 @@ final class CloudStore {
         try await saveProfile(uid: uid, data: data)
         for ingredient in data.pantry { try await saveIngredient(uid: uid, ingredient: ingredient) }
         for plan in data.plans { try await savePlan(uid: uid, plan: plan) }
+        for week in data.savedWeeks ?? [] { try await saveWeek(uid: uid, week: week) }
+    }
+
+    func saveWeek(uid: String, week: WeekPlan) async throws {
+        let json = String(decoding: try JSONEncoder().encode(week), as: UTF8.self)
+        try await plans.document(week.id).setData([
+            "plan_id": week.id,
+            "uid": uid,
+            "kind": "week",
+            "created_at": Timestamp(date: week.createdAt),
+            "plan_json": json,
+        ])
+    }
+
+    private static func encodeJSON<T: Encodable>(_ value: T?) -> Any {
+        guard let value, let data = try? JSONEncoder().encode(value) else { return NSNull() }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func decodeJSON<T: Decodable>(_ type: T.Type, _ value: Any?) -> T? {
+        guard let json = value as? String else { return nil }
+        return try? JSONDecoder().decode(T.self, from: Data(json.utf8))
     }
 
     func saveProfile(uid: String, data: UserData) async throws {
@@ -73,6 +111,9 @@ final class CloudStore {
             "updated_at": FieldValue.serverTimestamp(),
         ]
         if let done = data.onboardingDone { fields["onboarding_done"] = done }
+        fields["settings_json"] = Self.encodeJSON(data.settings)
+        fields["weights_json"] = Self.encodeJSON(data.weights)
+        fields["current_week_json"] = Self.encodeJSON(data.currentWeek)
         if let profile = data.profile {
             fields["body_profile"] = [
                 "sex": profile.sex.rawValue,
@@ -101,6 +142,8 @@ final class CloudStore {
         ]
         fields["min_grams"] = ingredient.minGrams.map { $0 as Any } ?? NSNull()
         fields["max_grams"] = ingredient.maxGrams.map { $0 as Any } ?? NSNull()
+        fields["meals"] = ingredient.meals.map { $0.map(\.rawValue) as Any } ?? NSNull()
+        fields["package"] = ingredient.package.map { ["unit": $0.unit, "grams": $0.grams] as Any } ?? NSNull()
         try await userDoc(uid).collection("pantry").document(ingredient.id).setData(fields)
     }
 
@@ -166,6 +209,11 @@ final class CloudStore {
                                   fat: double(macros["fat"]) ?? 0,
                                   calories: double(macros["calories"])),
             minGrams: double(fields["min_grams"]),
-            maxGrams: double(fields["max_grams"]))
+            maxGrams: double(fields["max_grams"]),
+            meals: (fields["meals"] as? [String])?.compactMap(MealSlot.init(rawValue:)),
+            package: (fields["package"] as? [String: Any]).flatMap { p in
+                guard let unit = p["unit"] as? String, let grams = double(p["grams"]), grams > 0 else { return nil }
+                return PackageSize(unit: unit, grams: grams)
+            })
     }
 }

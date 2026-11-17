@@ -7,16 +7,16 @@ struct CurrentPlanView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let plan = app.currentPlan {
-                    PlanContent(plan: plan)
+                if let week = app.data.currentWeek {
+                    WeekPlanView(week: week, isCurrent: true)
                         .toolbar {
                             ToolbarItem(placement: .primaryAction) {
-                                if app.isSaved(plan) {
+                                if app.isSaved(week) {
                                     Label("Saved", systemImage: "checkmark.circle.fill")
                                         .labelStyle(.titleAndIcon)
                                         .foregroundStyle(Theme.green)
                                 } else {
-                                    Button { withAnimation { app.save(plan) } } label: {
+                                    Button { withAnimation { app.save(week) } } label: {
                                         Label("Save", systemImage: "bookmark.fill")
                                             .labelStyle(.titleAndIcon)
                                     }
@@ -26,7 +26,7 @@ struct CurrentPlanView: View {
                 } else {
                     EmptyStateView(emoji: "🍽️",
                                    title: "No plan yet",
-                                   message: "Set your targets, pick foods in the Pantry, then tap Generate.") {
+                                   message: "Set your targets, pick foods in the Pantry, then tap Generate to plan your week.") {
                         Button {
                             app.selectedTab = .pantry
                         } label: {
@@ -49,23 +49,47 @@ struct HistoryView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if app.data.plans.isEmpty {
+                if app.savedWeeks.isEmpty && app.data.plans.isEmpty {
                     EmptyStateView(emoji: "📚",
                                    title: "No saved plans",
-                                   message: "Plans you save from the Plan tab show up here.") { EmptyView() }
+                                   message: "Weeks you save from the Plan tab show up here.") { EmptyView() }
                 } else {
                     List {
-                        ForEach(app.data.plans) { plan in
-                            NavigationLink {
-                                PlanContent(plan: plan)
-                                    .navigationTitle(plan.createdAt.formatted(date: .abbreviated, time: .omitted))
-                                    .navigationBarTitleDisplayMode(.inline)
-                            } label: {
-                                HistoryRow(plan: plan)
+                        if !app.savedWeeks.isEmpty {
+                            Section {
+                                ForEach(app.savedWeeks) { week in
+                                    NavigationLink {
+                                        WeekPlanView(week: week, isCurrent: false)
+                                            .navigationTitle("Week of " + week.startDate.formatted(.dateTime.month().day()))
+                                            .navigationBarTitleDisplayMode(.inline)
+                                    } label: {
+                                        WeekHistoryRow(week: week)
+                                    }
+                                }
+                                .onDelete { offsets in
+                                    offsets.map { app.savedWeeks[$0] }.forEach(app.delete)
+                                }
+                            } header: {
+                                SectionTitle(emoji: "🗓️", title: "Weeks")
                             }
                         }
-                        .onDelete { offsets in
-                            offsets.map { app.data.plans[$0] }.forEach(app.delete)
+                        if !app.data.plans.isEmpty {
+                            Section {
+                                ForEach(app.data.plans) { plan in
+                                    NavigationLink {
+                                        PlanContent(plan: plan)
+                                            .navigationTitle(plan.createdAt.formatted(date: .abbreviated, time: .omitted))
+                                            .navigationBarTitleDisplayMode(.inline)
+                                    } label: {
+                                        HistoryRow(plan: plan)
+                                    }
+                                }
+                                .onDelete { offsets in
+                                    offsets.map { app.data.plans[$0] }.forEach(app.delete)
+                                }
+                            } header: {
+                                SectionTitle(emoji: "📄", title: "Older single-day plans")
+                            }
                         }
                     }
                     .themedList()
@@ -77,7 +101,24 @@ struct HistoryView: View {
     }
 }
 
-private struct HistoryRow: View {
+private struct WeekHistoryRow: View {
+    let week: WeekPlan
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Week of " + week.startDate.formatted(.dateTime.weekday(.wide).month().day()))
+                .font(.headline)
+            Text("\(week.days.count) days · \(week.targets.calories.formatted()) kcal a day")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(GroceryList.items(for: week.days).prefix(6).map(\.ingredient.emoji).joined())
+                .font(.caption)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct HistoryRow: View {
     let plan: MealPlan
 
     var body: some View {
@@ -108,25 +149,46 @@ private struct HistoryRow: View {
 }
 
 /// Shared body for the current plan and saved plans.
+/// Order: breakfast, lunch, dinner; then how close the day gets; then the shopping list.
 struct PlanContent: View {
     let plan: MealPlan
     @State private var days = 5
 
+    /// Plans saved before meals existed show their daily totals as one card.
+    private var meals: [PlannedMeal] {
+        plan.meals ?? [PlannedMeal(slot: .lunch, items: plan.recipe)]
+    }
+
     var body: some View {
         List {
+            ForEach(meals) { meal in
+                Section {
+                    ForEach(meal.items) { item in
+                        PortionRow(item: item)
+                    }
+                    if meal.items.isEmpty {
+                        Text("Nothing planned for this meal.")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    MealHeader(meal: meal, isWholeDay: plan.meals == nil)
+                }
+            }
+
+            if !plan.unusedIngredients.isEmpty {
+                Section {
+                } footer: {
+                    Text("Not used: \(plan.unusedIngredients.map(\.name).joined(separator: ", ")). Check its portion limits in the Pantry.")
+                }
+            }
+
             Section {
                 PlanSummaryCard(plan: plan)
+            } header: {
+                SectionTitle(emoji: "🎯", title: "How close the day gets")
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
-
-            Section {
-                ForEach(plan.results) { result in
-                    MacroResultRow(result: result)
-                }
-            } header: {
-                SectionTitle(emoji: "🎯", title: "Daily totals")
-            }
 
             if !plan.suggestions.isEmpty {
                 Section {
@@ -137,37 +199,7 @@ struct PlanContent: View {
                         }
                     }
                 } header: {
-                    SectionTitle(emoji: "💡", title: "Suggestions")
-                }
-            }
-
-            Section {
-                ForEach(plan.recipe) { item in
-                    HStack(spacing: 12) {
-                        EmojiBadge(ingredient: item.ingredient)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(item.ingredient.name)
-                                .font(.body.weight(.medium))
-                            MacroPills(macros: item.macros, showCalories: false)
-                        }
-                        Spacer(minLength: 4)
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(GroceryList.formatWeight(grams: item.grams))
-                                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
-                                .foregroundStyle(item.ingredient.category.color)
-                            Text("\(Int(item.macros.calories.rounded())) kcal")
-                                .font(.caption2.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(MacroKind.calories.color)
-                        }
-                        .fixedSize()
-                    }
-                    .padding(.vertical, 2)
-                }
-            } header: {
-                SectionTitle(emoji: "🍳", title: "Daily recipe")
-            } footer: {
-                if !plan.unusedIngredients.isEmpty {
-                    Text("Not needed today: \(plan.unusedIngredients.map(\.name).joined(separator: ", ")).")
+                    SectionTitle(emoji: "💡", title: "Tips")
                 }
             }
 
@@ -175,30 +207,23 @@ struct PlanContent: View {
                 Stepper(value: $days, in: 1...14) {
                     HStack(spacing: 12) {
                         IconBadge(symbol: "calendar", color: Theme.teal)
-                        Text("Prep for **\(days)** days")
+                        Text("Shop for **\(days)** \(days == 1 ? "day" : "days")")
                             .contentTransition(.numericText())
                     }
                 }
                 ForEach(GroceryList.items(for: plan, days: days)) { item in
-                    HStack {
-                        Image(systemName: "cart.fill")
-                            .font(.caption)
-                            .foregroundStyle(Theme.teal)
-                        Text(item.name)
-                        Spacer()
-                        Text(item.formattedWeight)
-                            .font(.body.monospacedDigit().bold())
-                            .contentTransition(.numericText())
-                    }
+                    GroceryRow(item: item)
                 }
                 ShareLink(item: GroceryList.shareText(for: plan, days: days)) {
-                    Label("Share grocery list", systemImage: "square.and.arrow.up")
+                    Label("Share plan & grocery list", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(GradientButtonStyle())
                 .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
                 .listRowBackground(Color.clear)
             } header: {
-                SectionTitle(emoji: "🛒", title: "\(days)-day grocery list")
+                SectionTitle(emoji: "🛒", title: "Grocery list")
+            } footer: {
+                Text("Package sizes are typical US sizes. If yours differ, change them under Pantry > swipe a food > Edit.")
             }
             .animation(.snappy, value: days)
         }
@@ -206,8 +231,110 @@ struct PlanContent: View {
     }
 }
 
-/// Rings for each macro plus an overall status, at the top of a plan.
-private struct PlanSummaryCard: View {
+/// "🍳 Breakfast" with the meal's calories and macros.
+struct MealHeader: View {
+    let meal: PlannedMeal
+    let isWholeDay: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(isWholeDay ? "📋" : meal.slot.emoji)
+                Text(isWholeDay ? "Whole day" : meal.slot.displayName)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("\(Int(meal.macros.calories.rounded()).formatted()) kcal")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(MacroKind.calories.color)
+            }
+            MacroPills(macros: meal.macros, showCalories: false)
+        }
+        .textCase(nil)
+        .padding(.bottom, 2)
+    }
+}
+
+/// One food in a meal: how much to weigh, and how to weigh it.
+struct PortionRow: View {
+    let item: PlanItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            EmojiBadge(ingredient: item.ingredient)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.ingredient.name)
+                    .font(.body.weight(.medium))
+                    .lineLimit(2)
+                if let howTo = howToWeigh {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "scalemass")
+                        Text(howTo)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 1) {
+                // Bread, eggs, tortillas: "3 slices", with the weight underneath.
+                Text(item.pieceText ?? GroceryList.formatWeight(grams: item.grams))
+                    .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                    .foregroundStyle(item.ingredient.category.color)
+                if item.pieceText != nil {
+                    Text(GroceryList.formatWeight(grams: item.grams))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fixedSize()
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// e.g. "Weigh dry · about 270 g cooked"
+    private var howToWeigh: String? {
+        guard let instruction = item.ingredient.weighingState.instruction else { return nil }
+        var text = instruction.prefix(1).uppercased() + instruction.dropFirst()
+        if let cooked = item.approximateCookedGrams {
+            text += " · about \(GroceryList.formatWeight(grams: cooked)) cooked"
+        }
+        return text
+    }
+}
+
+/// "3 packs  Ground beef" with the package size underneath.
+struct GroceryRow: View {
+    let item: GroceryItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            EmojiBadge(ingredient: item.ingredient, size: 34)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .lineLimit(2)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Text(item.quantityText)
+                .font(.body.monospacedDigit().bold())
+                .foregroundStyle(Theme.teal)
+                .contentTransition(.numericText())
+                .fixedSize()
+        }
+    }
+
+    /// e.g. "16 oz pack · you'll use 1.52 kg"
+    private var detail: String {
+        guard let package = item.package else { return "Package size unknown, set it in the Pantry" }
+        return "\(package.sizeText) · you'll use \(item.formattedWeight)"
+    }
+}
+
+/// Rings for each macro, how far off each one is, and an overall status.
+struct PlanSummaryCard: View {
     let plan: MealPlan
 
     var body: some View {
@@ -215,11 +342,12 @@ private struct PlanSummaryCard: View {
             HStack(spacing: 8) {
                 Image(systemName: plan.isWithinMargin ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
                 Text(plan.isWithinMargin
-                     ? "All targets within ±\(Int(plan.marginOfError * 100))%"
-                     : "Some targets are off by more than \(Int(plan.marginOfError * 100))%")
+                     ? "Hits all your targets (within ±\(Int(plan.marginOfError * 100))%)"
+                     : "Close, but some targets are off by more than \(Int(plan.marginOfError * 100))%")
             }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background((plan.isWithinMargin ? Theme.green : Color.orange).gradient, in: Capsule())
@@ -234,10 +362,22 @@ private struct PlanSummaryCard: View {
                         Text("of \(Int(result.target.rounded()))")
                             .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
+                        if let error = result.relativeError {
+                            Text(error.formatted(.percent.precision(.fractionLength(0)).sign(strategy: .always())))
+                                .font(.caption2.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(result.isWithinMargin ? Theme.green : .orange)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background((result.isWithinMargin ? Theme.green : Color.orange).opacity(0.14), in: Capsule())
+                        }
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
+
+            Text("Daily total vs. your targets")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 18)
         .padding(.horizontal, 10)
@@ -292,48 +432,6 @@ struct EmptyStateView<Actions: View>: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { bounce = true }
-    }
-}
-
-struct MacroResultRow: View {
-    let result: MacroResult
-
-    private var statusColor: Color { result.isWithinMargin ? Theme.green : .orange }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: result.kind.symbol)
-                    .font(.caption)
-                    .foregroundStyle(result.kind.color)
-                    .frame(width: 18)
-                Text(result.kind.displayName)
-                    .font(.subheadline.weight(.medium))
-                Spacer()
-                Text("\(Int(result.achieved.rounded())) / \(Int(result.target.rounded())) \(result.kind.unit)")
-                    .font(.subheadline)
-                    .monospacedDigit()
-                if let error = result.relativeError {
-                    Text(error.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always())))
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(statusColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(statusColor.opacity(0.14), in: Capsule())
-                        .frame(width: 64, alignment: .trailing)
-                }
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(result.kind.color.opacity(0.15))
-                    Capsule()
-                        .fill(result.kind.color.gradient)
-                        .frame(width: geo.size.width * min(result.achieved / max(result.target, 1), 1))
-                }
-            }
-            .frame(height: 8)
-        }
-        .padding(.vertical, 4)
     }
 }
 

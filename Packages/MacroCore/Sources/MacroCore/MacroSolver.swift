@@ -55,30 +55,59 @@ public enum MacroSolver {
         guard !ingredients.isEmpty else { throw SolverError.noIngredients }
         guard targets.isValid else { throw SolverError.invalidTargets }
 
-        let n = ingredients.count
         let tracksCalories = targets.calories > 0
-        let kinds: [MacroKind] = tracksCalories ? [.protein, .carbs, .fat, .calories] : [.protein, .carbs, .fat]
-
-        // Variables are in units of 100 g so all coefficients are on a similar scale.
-        var lower = [Double](repeating: 0, count: n)
-        var upper = [Double](repeating: 0, count: n)
-        for (i, ing) in ingredients.enumerated() {
+        var lower: [Double] = []
+        var upper: [Double] = []
+        for ing in ingredients {
             let lo = ing.minGrams ?? 0
             let hi = ing.maxGrams ?? options.defaultMaxGrams
             guard lo >= 0, hi >= lo, lo.isFinite, hi.isFinite else {
                 throw SolverError.invalidBounds(ingredient: ing.name)
             }
-            lower[i] = lo / 100
-            upper[i] = hi / 100
+            lower.append(lo)
+            upper.append(hi)
         }
+
+        let grams = optimize(ingredients: ingredients, lowerGrams: lower, upperGrams: upper,
+                             target: targets.macros, tracksCalories: tracksCalories, options: options)
+        let items: [PlanItem] = ingredients.enumerated().map { i, ing in
+            let rounded = Self.round(grams[i], step: options.roundingStep)
+            return PlanItem(ingredient: ing, grams: min(max(rounded, lower[i]), upper[i]))
+        }
+
+        return MealPlan(createdAt: now,
+                        targets: targets,
+                        items: items,
+                        marginOfError: options.marginOfError)
+    }
+
+    /// Core optimizer: grams of each ingredient (unrounded) that best match `target` within the bounds.
+    /// Used for a whole day by `solve` and for each meal by `MealPlanner`.
+    static func optimize(ingredients: [Ingredient],
+                         lowerGrams: [Double],
+                         upperGrams: [Double],
+                         target: Macros,
+                         tracksCalories: Bool,
+                         options: SolverOptions) -> [Double] {
+        let n = ingredients.count
+        guard n > 0 else { return [] }
+        // A macro with a zero target is ignored rather than pushed to zero: a meal planned with no carbs
+        // (only egg whites available at breakfast) shouldn't be starved over their 0.7 g of carbs.
+        let kinds: [MacroKind] = (tracksCalories ? [.protein, .carbs, .fat, .calories] : [.protein, .carbs, .fat])
+            .filter { target[$0] >= 1 }
+        guard !kinds.isEmpty else { return lowerGrams }
+
+        // Variables are in units of 100 g so all coefficients are on a similar scale.
+        let lower = lowerGrams.map { $0 / 100 }
+        let upper = upperGrams.map { $0 / 100 }
 
         // Scaled design matrix A (rows = macros, cols = foods) and target vector b.
         var a = [[Double]](repeating: [Double](repeating: 0, count: n), count: kinds.count)
         var b = [Double](repeating: 0, count: kinds.count)
         for (k, kind) in kinds.enumerated() {
-            let target = Double(targets[kind])
-            let scale = 1.0 / max(target, 1.0)
-            b[k] = target * scale
+            let t = target[kind]
+            let scale = 1.0 / max(t, 1.0)
+            b[k] = t * scale
             for i in 0..<n {
                 a[k][i] = ingredients[i].macrosPer100g[kind] * scale
             }
@@ -114,17 +143,7 @@ public enum MacroSolver {
             }
             if largestStep < options.tolerance { break }
         }
-
-        let items: [PlanItem] = ingredients.enumerated().map { i, ing in
-            let grams = Self.round(x[i] * 100, step: options.roundingStep)
-            let clamped = min(max(grams, ing.minGrams ?? 0), ing.maxGrams ?? options.defaultMaxGrams)
-            return PlanItem(ingredient: ing, grams: clamped)
-        }
-
-        return MealPlan(createdAt: now,
-                        targets: targets,
-                        items: items,
-                        marginOfError: options.marginOfError)
+        return x.map { $0 * 100 }
     }
 
     static func round(_ value: Double, step: Double) -> Double {

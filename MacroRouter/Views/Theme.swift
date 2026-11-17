@@ -65,6 +65,8 @@ extension IngredientCategory {
 extension Ingredient {
     /// A food-specific emoji when the name gives it away, otherwise the category's.
     var emoji: String {
+        // Oils first, so "Oil, corn, peanut, and olive" isn't shown as corn.
+        if nameHas("^oil") { return "🫗" }
         let name = self.name.lowercased()
         let table: [(keys: [String], emoji: String)] = [
             (["egg"], "🥚"), (["chicken", "turkey"], "🍗"), (["beef", "steak", "pork", "lamb", "bison"], "🥩"),
