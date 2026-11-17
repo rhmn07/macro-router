@@ -4,6 +4,7 @@ Tell it your daily macros and the foods you want to eat. It calculates the exact
 
 - **SwiftUI**, iOS 17+
 - **On-device optimizer** (`Packages/MacroCore`): box-constrained weighted least squares. Every macro is measured as relative error, and you can set optional min/max grams per food. It returns the best possible plan even when the selected foods can't hit the targets exactly, and reports which macros miss the ±5% margin.
+- **Guided setup**: on first launch it asks for goal (lose, maintain, gain), sex, age, height, weight and activity, then suggests daily targets (Mifflin-St Jeor) that the user can edit. Redo it anytime from Targets.
 - **Any food**: 7 pre-seeded staples, **USDA FoodData Central search**, or a **custom food** entered from a nutrition label.
 - **Firebase Auth + Firestore** (optional). Without a Firebase config the app runs in local-only mode.
 
@@ -65,7 +66,7 @@ On the first sign-in, data the user created in local mode is uploaded to the clo
 ## Firestore layout
 | Path | Fields |
 |---|---|
-| `users/{uid}` | `target_calories`, `target_protein`, `target_carbs`, `target_fats`, `selected_ingredient_ids` |
+| `users/{uid}` | `target_calories`, `target_protein`, `target_carbs`, `target_fats`, `selected_ingredient_ids`, `onboarding_done`, `body_profile {sex, age, height_cm, weight_kg, activity, goal, uses_metric}` |
 | `users/{uid}/pantry/{id}` | `name`, `source`, `macros_per_100g {protein, carbs, fat, calories}`, `min_grams`, `max_grams` |
 | `generated_plans/{plan_id}` | `plan_id`, `uid`, `daily_weights`, `achieved_macros`, `created_at`, `plan_json` |
 

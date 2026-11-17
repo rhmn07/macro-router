@@ -10,13 +10,18 @@ struct RootView: View {
                 LoginView()
             } else {
                 MainTabView()
+                    .fullScreenCover(isPresented: Binding(get: { app.needsOnboarding }, set: { _ in })) {
+                        OnboardingView()
+                    }
             }
         }
         .overlay {
             if app.isLoading {
                 ProgressView("Syncing…")
-                    .padding()
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .tint(Theme.green)
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                    .shadow(color: .black.opacity(0.1), radius: 12, y: 6)
             }
         }
         .alert("Something went wrong",
@@ -35,17 +40,18 @@ struct MainTabView: View {
         @Bindable var app = app
         TabView(selection: $app.selectedTab) {
             TargetsView()
-                .tabItem { Label("Targets", systemImage: "target") }
+                .tabItem { Label("Targets", systemImage: "scope") }
                 .tag(AppTab.targets)
             PantryView()
-                .tabItem { Label("Pantry", systemImage: "basket") }
+                .tabItem { Label("Pantry", systemImage: "basket.fill") }
                 .tag(AppTab.pantry)
             CurrentPlanView()
                 .tabItem { Label("Plan", systemImage: "fork.knife") }
                 .tag(AppTab.plan)
             HistoryView()
-                .tabItem { Label("History", systemImage: "clock") }
+                .tabItem { Label("History", systemImage: "clock.fill") }
                 .tag(AppTab.history)
         }
+        .tint(Theme.green)
     }
 }

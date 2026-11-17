@@ -4,7 +4,8 @@ import MacroCore
 
 /// Firestore persistence, following the PRD schema:
 ///
-///   users/{uid}                    target_calories, target_protein, target_carbs, target_fats, selected_ingredient_ids
+///   users/{uid}                    target_calories, target_protein, target_carbs, target_fats, selected_ingredient_ids,
+///                                  onboarding_done, body_profile {sex, age, height_cm, weight_kg, activity, goal, uses_metric}
 ///   users/{uid}/pantry/{id}        name, source, macros_per_100g {protein, carbs, fat, calories}, min_grams, max_grams
 ///   generated_plans/{plan_id}      plan_id, uid, daily_weights, achieved_macros, created_at, plan_json
 final class CloudStore {
@@ -32,6 +33,8 @@ final class CloudStore {
         if let ids = fields["selected_ingredient_ids"] as? [String] {
             data.selectedIDs = Set(ids)
         }
+        data.onboardingDone = fields["onboarding_done"] as? Bool
+        data.profile = (fields["body_profile"] as? [String: Any]).flatMap(Self.profile)
 
         let pantry = try await userDoc(uid).collection("pantry").getDocuments()
         let ingredients = pantry.documents.compactMap { Self.ingredient(id: $0.documentID, fields: $0.data()) }
@@ -53,21 +56,35 @@ final class CloudStore {
     // MARK: Write
 
     func uploadAll(uid: String, data: UserData) async throws {
-        try await saveProfile(uid: uid, targets: data.targets, selectedIDs: data.selectedIDs)
+        try await saveProfile(uid: uid, data: data)
         for ingredient in data.pantry { try await saveIngredient(uid: uid, ingredient: ingredient) }
         for plan in data.plans { try await savePlan(uid: uid, plan: plan) }
     }
 
-    func saveProfile(uid: String, targets: MacroTargets, selectedIDs: Set<String>) async throws {
-        try await userDoc(uid).setData([
+    func saveProfile(uid: String, data: UserData) async throws {
+        let targets = data.targets
+        var fields: [String: Any] = [
             "uid": uid,
             "target_calories": targets.calories,
             "target_protein": targets.protein,
             "target_carbs": targets.carbs,
             "target_fats": targets.fat,
-            "selected_ingredient_ids": Array(selectedIDs).sorted(),
+            "selected_ingredient_ids": Array(data.selectedIDs).sorted(),
             "updated_at": FieldValue.serverTimestamp(),
-        ], merge: true)
+        ]
+        if let done = data.onboardingDone { fields["onboarding_done"] = done }
+        if let profile = data.profile {
+            fields["body_profile"] = [
+                "sex": profile.sex.rawValue,
+                "age": profile.age,
+                "height_cm": profile.heightCm,
+                "weight_kg": profile.weightKg,
+                "activity": profile.activity.rawValue,
+                "goal": profile.goal.rawValue,
+                "uses_metric": profile.usesMetric,
+            ] as [String: Any]
+        }
+        try await userDoc(uid).setData(fields, merge: true)
     }
 
     func saveIngredient(uid: String, ingredient: Ingredient) async throws {
@@ -123,6 +140,17 @@ final class CloudStore {
     private static func double(_ value: Any?) -> Double? {
         if let n = value as? NSNumber { return n.doubleValue }
         return nil
+    }
+
+    private static func profile(_ fields: [String: Any]) -> BodyProfile? {
+        guard let sex = (fields["sex"] as? String).flatMap(BiologicalSex.init(rawValue:)),
+              let age = int(fields["age"]),
+              let height = double(fields["height_cm"]),
+              let weight = double(fields["weight_kg"]),
+              let activity = (fields["activity"] as? String).flatMap(ActivityLevel.init(rawValue:)),
+              let goal = (fields["goal"] as? String).flatMap(WeightGoal.init(rawValue:)) else { return nil }
+        return BodyProfile(sex: sex, age: age, heightCm: height, weightKg: weight, activity: activity, goal: goal,
+                           usesMetric: fields["uses_metric"] as? Bool ?? true)
     }
 
     private static func ingredient(id: String, fields: [String: Any]) -> Ingredient? {
