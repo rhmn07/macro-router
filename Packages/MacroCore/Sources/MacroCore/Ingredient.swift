@@ -42,9 +42,12 @@ public struct Ingredient: Codable, Hashable, Identifiable, Sendable {
         self.maxGrams = maxGrams
     }
 
+    /// The macro with the most grams, matching how people read a nutrition label.
+    /// (Comparing calories instead would put salmon, whole eggs and most meat under fat,
+    /// because fat has 9 kcal/g against 4 for protein.)
     public var category: IngredientCategory {
         let m = macrosPer100g
-        let p = 4 * m.protein, c = 4 * m.carbs, f = 9 * m.fat
+        let p = m.protein, c = m.carbs, f = m.fat
         if p >= c && p >= f { return .protein }
         if c >= f { return .carb }
         return .fat
