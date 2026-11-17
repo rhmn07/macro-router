@@ -12,17 +12,28 @@ struct LoginView: View {
         NavigationStack {
             Form {
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Image(systemName: "chart.pie.fill")
-                            .font(.largeTitle)
-                            .foregroundStyle(.tint)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: -10) {
+                            ForEach(["🍗", "🍚", "🥑"], id: \.self) { emoji in
+                                Text(emoji)
+                                    .font(.system(size: 30))
+                                    .frame(width: 56, height: 56)
+                                    .background(.white.opacity(0.9), in: Circle())
+                                    .overlay(Circle().stroke(.white, lineWidth: 2))
+                            }
+                        }
                         Text("Macro Router")
-                            .font(.largeTitle.bold())
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
                         Text("Tell it your macros and your foods. Get exact gram weights and a grocery list.")
-                            .foregroundStyle(.secondary)
+                            .opacity(0.9)
                     }
-                    .padding(.vertical, 8)
+                    .foregroundStyle(.white)
+                    .padding(22)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                    .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
                 }
+                .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
 
                 Section {
@@ -39,16 +50,17 @@ struct LoginView: View {
                     Button {
                         Task { await submit() }
                     } label: {
-                        HStack {
-                            Spacer()
-                            if isWorking { ProgressView() } else {
-                                Text(isCreatingAccount ? "Create account" : "Sign in").bold()
-                            }
-                            Spacer()
+                        if isWorking { ProgressView().tint(.white) } else {
+                            Text(isCreatingAccount ? "Create account" : "Sign in")
                         }
                     }
+                    .buttonStyle(GradientButtonStyle())
                     .disabled(isWorking || email.isEmpty || password.count < 6)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
 
+                Section {
                     Button(isCreatingAccount ? "I already have an account" : "Create a new account") {
                         isCreatingAccount.toggle()
                     }
@@ -68,6 +80,7 @@ struct LoginView: View {
                     Text("Your data stays on this iPhone. Sign in later from the Targets tab to back it up and sync.")
                 }
             }
+            .themedList()
         }
     }
 

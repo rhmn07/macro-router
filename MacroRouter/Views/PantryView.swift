@@ -14,7 +14,7 @@ struct PantryView: View {
                         .filter { $0.category == category }
                         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                     if !foods.isEmpty {
-                        Section(category.displayName) {
+                        Section {
                             ForEach(foods) { ingredient in
                                 IngredientRow(ingredient: ingredient,
                                               isSelected: app.isSelected(ingredient)) {
@@ -38,26 +38,31 @@ struct PantryView: View {
                                     }
                                 }
                             }
+                        } header: {
+                            CategoryHeader(category: category,
+                                           selected: foods.filter { app.isSelected($0) }.count,
+                                           total: foods.count)
                         }
                     }
                 }
 
                 Section {
                     Button { showingSearch = true } label: {
-                        Label("Search foods (USDA database)", systemImage: "magnifyingglass")
+                        ActionRow(title: "Search foods", subtitle: "USDA database", symbol: "magnifyingglass", color: Theme.teal)
                     }
                     Button { editing = .new } label: {
-                        Label("Add a custom food", systemImage: "square.and.pencil")
+                        ActionRow(title: "Add a custom food", subtitle: "From a nutrition label", symbol: "square.and.pencil", color: MacroKind.calories.color)
                     }
                     if SeedIngredients.all.contains(where: { !app.contains($0) }) {
                         Button { app.restoreStaples() } label: {
-                            Label("Restore default staples", systemImage: "arrow.counterclockwise")
+                            ActionRow(title: "Restore default staples", subtitle: nil, symbol: "arrow.counterclockwise", color: .gray)
                         }
                     }
                 } footer: {
-                    Text("Tap a food to include it this week. Swipe left to edit portion limits or delete it.")
+                    Text("Macros are per 100 g. Tap a food to include it this week. Swipe left to edit portion limits or delete it.")
                 }
             }
+            .themedList()
             .navigationTitle("Pantry")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -65,7 +70,9 @@ struct PantryView: View {
                         Button { showingSearch = true } label: { Label("Search foods", systemImage: "magnifyingglass") }
                         Button { editing = .new } label: { Label("Custom food", systemImage: "square.and.pencil") }
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
                     }
                 }
             }
@@ -109,15 +116,64 @@ private struct GenerateBar: View {
         Button {
             app.generatePlan()
         } label: {
-            Text(count == 0 ? "Select foods to generate a plan" : "Generate plan · \(count) foods")
-                .bold()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+            Label(count == 0 ? "Select foods to generate a plan" : "Generate plan · \(count) foods",
+                  systemImage: "wand.and.stars")
+                .contentTransition(.numericText())
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(GradientButtonStyle())
         .disabled(count == 0)
-        .padding()
-        .background(.bar)
+        .animation(.snappy, value: count)
+        .padding(.horizontal)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
+    }
+}
+
+private struct CategoryHeader: View {
+    let category: IngredientCategory
+    let selected: Int
+    let total: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(category.emoji)
+            Text(category.displayName)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.primary)
+                .textCase(nil)
+            Spacer()
+            Text("\(selected)/\(total) picked")
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(category.color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(category.color.opacity(0.14), in: Capsule())
+                .textCase(nil)
+        }
+    }
+}
+
+private struct ActionRow: View {
+    let title: String
+    let subtitle: String?
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            IconBadge(symbol: symbol, color: color)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).foregroundStyle(Color(.label))
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(Color(.secondaryLabel))
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
     }
 }
 
@@ -129,29 +185,39 @@ struct IngredientRow: View {
     var body: some View {
         Button(action: toggle) {
             HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(ingredient.name)
-                        .foregroundStyle(.primary)
-                    Text(MacroFormat.per100g(ingredient.macrosPer100g))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                EmojiBadge(ingredient: ingredient)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text(ingredient.name)
+                            .font(.body.weight(isSelected ? .semibold : .regular))
+                            .foregroundStyle(.primary)
+                        if ingredient.source == .custom {
+                            Text("Custom")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.quaternary, in: Capsule())
+                        }
+                    }
+                    MacroPills(macros: ingredient.macrosPer100g)
                     if let limits = MacroFormat.limits(ingredient) {
-                        Text(limits)
+                        Label(limits, systemImage: "ruler")
                             .font(.caption)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Theme.teal)
                     }
                 }
-                Spacer()
-                if ingredient.source == .custom {
-                    Text("Custom").font(.caption2).foregroundStyle(.secondary)
-                }
+                Spacer(minLength: 4)
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.brandGradient) : AnyShapeStyle(Color.secondary.opacity(0.5)))
+                    .symbolEffect(.bounce, value: isSelected)
             }
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(.selection, trigger: isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

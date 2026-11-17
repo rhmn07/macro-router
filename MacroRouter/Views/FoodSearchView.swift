@@ -22,7 +22,12 @@ struct FoodSearchView: View {
                 }
 
                 if let error {
-                    Section { Text(error).foregroundStyle(.orange) }
+                    Section {
+                        HStack(alignment: .top, spacing: 12) {
+                            IconBadge(symbol: "exclamationmark.triangle.fill", color: .orange)
+                            Text(error).font(.subheadline)
+                        }
+                    }
                 }
 
                 Section {
@@ -31,23 +36,23 @@ struct FoodSearchView: View {
                         Button {
                             if !added { app.upsert(food) }
                         } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 12) {
+                                EmojiBadge(ingredient: food, size: 36)
+                                VStack(alignment: .leading, spacing: 5) {
                                     Text(food.name).foregroundStyle(.primary)
-                                    Text(MacroFormat.per100g(food.macrosPer100g))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    MacroPills(macros: food.macrosPer100g)
                                 }
-                                Spacer()
-                                Image(systemName: added ? "checkmark.circle.fill" : "plus.circle")
-                                    .font(.title3)
-                                    .foregroundStyle(added ? Color.green : Color.accentColor)
+                                Spacer(minLength: 4)
+                                Image(systemName: added ? "checkmark.circle.fill" : "plus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(added ? AnyShapeStyle(Theme.green) : AnyShapeStyle(Theme.brandGradient))
+                                    .symbolEffect(.bounce, value: added)
                             }
                         }
                         .disabled(added)
                     }
                 } header: {
-                    if !results.isEmpty { Text("Tap to add to your pantry") }
+                    if !results.isEmpty { SectionTitle(emoji: "🔎", title: "Tap to add to your pantry") }
                 }
             }
             .overlay {
@@ -61,6 +66,7 @@ struct FoodSearchView: View {
                                            description: Text("Salmon, Greek yogurt, oats, sweet potato…"))
                 }
             }
+            .themedList()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search foods")
             .task(id: SearchKey(query: query, branded: includeBranded)) {
                 await runSearch()
