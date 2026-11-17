@@ -28,6 +28,32 @@ struct WeekPlanView: View {
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
 
+            // Macros this day misses by more than 10%, right under the progress card.
+            let misses = day.results.filter { $0.kind != .calories && abs($0.relativeError ?? 0) > PantryCheck.threshold }
+            if !misses.isEmpty {
+                Section {
+                    ForEach(misses) { result in
+                        let error = result.relativeError ?? 0
+                        HStack(alignment: .top, spacing: 12) {
+                            IconBadge(symbol: "exclamationmark.triangle.fill", color: .orange, size: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(result.kind.displayName) \(Int((abs(error) * 100).rounded()))% \(error < 0 ? "short" : "over") today")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("\(Int(result.achieved.rounded())) of \(Int(result.target.rounded())) \(result.kind.unit). See Tips below, or fix it in the Pantry.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    if isCurrent {
+                        Button { app.selectedTab = .pantry } label: {
+                            Label("Fix in Pantry", systemImage: "basket.fill")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                }
+            }
+
             ForEach(day.meals ?? []) { meal in
                 MealSection(week: week, day: selectedDay, meal: meal, isCurrent: isCurrent)
             }

@@ -18,6 +18,43 @@ struct UserData: Codable, Equatable {
     var settings: PlannerSettings?
     var weights: [WeightEntry]?
     var reminders: ReminderSettings?
+    /// Set once old USDA names have been tidied, so already-clean names aren't cleaned twice.
+    var foodNamesCleaned: Bool?
+}
+
+extension UserData {
+    /// USDA foods added before names were tidied ("Beef, ground, 93% lean meat / 7% fat, raw") get
+    /// the readable name ("Ground beef 93/7 (raw)"), in the pantry and the current week. Branded
+    /// foods ("… (Brand)") and names the user typed are left alone.
+    func withCleanFoodNames() -> UserData {
+        guard foodNamesCleaned != true else { return self }
+        func cleaned(_ ing: Ingredient) -> Ingredient {
+            // Raw USDA names start with a one-word food ("Beef, ground, …"). Clean names don't, except
+            // lists like "Corn, peanut and olive oil" (raw ones say ", and").
+            let first = ing.name.split(separator: ",").first.map(String.init) ?? ""
+            let looksRaw = !first.contains(" ") && (!ing.name.contains(" and ") || ing.name.contains(", and "))
+            guard ing.source == .usda, ing.name.contains(","), !ing.name.hasSuffix(")"), looksRaw else { return ing }
+            var copy = ing
+            copy.name = FoodName.clean(ing.name)
+            return copy
+        }
+        func cleaned(_ items: [PlanItem]) -> [PlanItem] {
+            items.map { PlanItem(ingredient: cleaned($0.ingredient), grams: $0.grams) }
+        }
+        var data = self
+        data.foodNamesCleaned = true
+        data.pantry = pantry.map(cleaned)
+        if var week = currentWeek {
+            week.days = week.days.map { day in
+                var day = day
+                day.items = cleaned(day.items)
+                day.meals = day.meals?.map { PlannedMeal(slot: $0.slot, items: cleaned($0.items)) }
+                return day
+            }
+            data.currentWeek = week
+        }
+        return data
+    }
 }
 
 /// Meal reminder times, in minutes after midnight.
@@ -55,7 +92,7 @@ final class AppState {
         self.cloud = cloudEnabled ? CloudStore() : nil
         self.auth = AuthService(isEnabled: cloudEnabled)
         self.isGuest = !cloudEnabled
-        if let stored = local.load(key: userKey) { data = stored }
+        if let stored = local.load(key: userKey) { data = stored.withCleanFoodNames() }
         auth.onUserChange = { [weak self] user in
             Task { await self?.userDidChange(user) }
         }
@@ -81,18 +118,18 @@ final class AppState {
         profileSyncTask?.cancel()
         guard let user else {
             userKey = "guest"
-            data = local.load(key: userKey) ?? UserData()
+            data = (local.load(key: userKey) ?? UserData()).withCleanFoodNames()
             return
         }
         isGuest = false
         userKey = user.uid
-        data = local.load(key: userKey) ?? UserData()
+        data = (local.load(key: userKey) ?? UserData()).withCleanFoodNames()
         guard let cloud else { return }
         isLoading = true
         defer { isLoading = false }
         do {
             if let remote = try await cloud.fetchUserData(uid: user.uid) {
-                data = remote
+                data = remote.withCleanFoodNames()
                 local.save(data, key: userKey)
             } else {
                 // First sign-in: upload whatever the user set up locally.

@@ -9,6 +9,24 @@ struct PantryView: View {
     var body: some View {
         NavigationStack {
             List {
+                let gaps = PantryCheck.gaps(selected: app.selectedIngredients, pantry: app.data.pantry,
+                                            targets: app.data.targets, settings: app.settings)
+                if !gaps.isEmpty {
+                    Section {
+                        ForEach(gaps) { gap in
+                            GapRow(gap: gap) { food in
+                                withAnimation {
+                                    if app.contains(food) { app.setSelected(food, true) } else { app.upsert(food) }
+                                }
+                            }
+                        }
+                    } header: {
+                        SectionTitle(emoji: "⚠️", title: "Before you plan")
+                    } footer: {
+                        Text("Checked with a trial plan of your picked foods and targets.")
+                    }
+                }
+
                 ForEach(IngredientCategory.allCases) { category in
                     let foods = app.data.pantry
                         .filter { $0.category == category }
@@ -238,5 +256,34 @@ enum MacroFormat {
         case (nil, let max?): return "At most \(Int(max)) g/day"
         case (let min?, let max?): return "\(Int(min))–\(Int(max)) g/day"
         }
+    }
+}
+
+/// One macro the picked foods can't reach, with a one-tap fix.
+private struct GapRow: View {
+    let gap: MacroGap
+    let add: (Ingredient) -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            IconBadge(symbol: gap.kind.symbol, color: gap.kind.color)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(gap.headline)
+                    .font(.subheadline.weight(.semibold))
+                Text(gap.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let food = gap.suggestion {
+                    Button { add(food) } label: {
+                        Label("Add \(food.shortName.lowercased())", systemImage: "plus.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(gap.kind.color)
+                    .controlSize(.small)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

@@ -104,9 +104,11 @@ final class WeekPlanTests: XCTestCase {
         XCTAssertEqual(steps.count, 3)
         XCTAssertTrue(steps[0].contains("170 g raw chicken breast in 10 g olive oil"), steps[0])
         XCTAssertTrue(steps[1].contains("about 270 g cooked"), steps[1])
-        let beef = Ingredient(name: "Beef, ground, 93% lean meat / 7% fat, crumbles, cooked", source: .custom, macrosPer100g: .zero)
+        let beef = Ingredient(name: FoodName.clean("Beef, ground, 93% lean meat / 7% fat, crumbles, cooked"), source: .usda, macrosPer100g: .zero)
         XCTAssertEqual(beef.shortName, "Ground beef")
-        let soup = Ingredient(name: "Soup, black bean, canned, condensed", source: .custom, macrosPer100g: .zero)
+        let soup = Ingredient(name: FoodName.clean("Soup, black bean, canned, condensed"), source: .usda, macrosPer100g: .zero)
+        XCTAssertEqual(Ingredient(name: "Corn, peanut and olive oil", source: .usda, macrosPer100g: .zero).shortName, "Corn, peanut and olive oil")
+        XCTAssertEqual(Ingredient(name: "Greek yogurt, nonfat", source: .usda, macrosPer100g: .zero).shortName, "Greek yogurt")
         XCTAssertEqual(soup.shortName, "Black bean soup")
     }
 

@@ -62,8 +62,11 @@ extension USDAFood {
                           macrosPer100g: Macros(protein: p, carbs: c, fat: f, calories: calories))
     }
 
-    /// USDA descriptions are often ALL CAPS for branded foods; tidy them up.
+    /// Readable name: generic foods are tidied by `FoodName.clean`; branded ones (often ALL CAPS)
+    /// are title-cased and get their brand in parentheses.
     public var displayName: String {
+        let isBranded = (brandName ?? brandOwner).map { !$0.isEmpty } ?? false
+        if !isBranded { return FoodName.clean(description) }
         let base = description == description.uppercased() ? description.capitalized : description
         if let brand = brandName ?? brandOwner, !brand.isEmpty {
             let tidyBrand = brand == brand.uppercased() ? brand.capitalized : brand

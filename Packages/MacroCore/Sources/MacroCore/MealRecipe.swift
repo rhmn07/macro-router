@@ -4,20 +4,14 @@ extension Ingredient {
     /// Readable name for meal titles: "Beef, ground, 93% lean meat…" → "Ground beef",
     /// "Soup, black bean, canned" → "Black bean soup", "Chicken Breast (raw)" → "Chicken breast".
     public var shortName: String {
+        if nameHas("egg white") { return "Egg whites" }
         var text = name
         if let paren = text.firstIndex(of: "(") { text = String(text[..<paren]) }
+        text = text.replacingOccurrences(of: #"\s*\d+/\d+"#, with: "", options: .regularExpression)
         let parts = text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         guard let first = parts.first else { return name }
-        let skip = ["raw", "cooked", "dry", "uncooked", "canned", "condensed", "fresh", "frozen", "boneless",
-                    "skinless", "grade a", "large", "plain", "enriched", "regular", "pan-browned", "crumbles"]
-        var result = first
-        if nameHas("egg white") { return "Egg whites" }
-        if first.split(separator: " ").count == 1, parts.count > 1 {
-            let detail = parts[1]
-            if !skip.contains(detail.lowercased()) && !detail.contains("%") && detail.count < 20 {
-                result = "\(detail) \(first.lowercased())"
-            }
-        }
+        // "Greek yogurt, nonfat" → "Greek yogurt"; "Corn, peanut and olive oil" stays whole.
+        var result = first.split(separator: " ").count >= 2 ? first : parts.joined(separator: ", ")
         result = result.lowercased()
         return result.prefix(1).uppercased() + result.dropFirst()
     }

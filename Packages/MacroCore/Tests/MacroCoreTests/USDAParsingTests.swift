@@ -16,7 +16,7 @@ final class USDAParsingTests: XCTestCase {
         let response = try JSONDecoder().decode(USDASearchResponse.self, from: Data(json.utf8))
         let ingredient = try XCTUnwrap(response.foods.first?.toIngredient())
         XCTAssertEqual(ingredient.id, "usda-175167")
-        XCTAssertEqual(ingredient.name, "Fish, Salmon, Atlantic, Farmed, Raw")
+        XCTAssertEqual(ingredient.name, "Atlantic salmon, farmed (raw)")
         XCTAssertEqual(ingredient.macrosPer100g.protein, 20.4)
         XCTAssertEqual(ingredient.macrosPer100g.calories, 208)
         XCTAssertEqual(ingredient.category, .protein)
