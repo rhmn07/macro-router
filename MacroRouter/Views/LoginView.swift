@@ -31,7 +31,7 @@ struct LoginView: View {
                     .padding(22)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-                    .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
+                    .shadow(color: Theme.blue.opacity(0.3), radius: 14, y: 8)
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)

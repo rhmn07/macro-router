@@ -102,7 +102,7 @@ struct WeekPlanView: View {
         Section {
             Stepper(value: $shopDays, in: 1...max(week.days.count - selectedDay, 1)) {
                 HStack(spacing: 12) {
-                    IconBadge(symbol: "calendar", color: Theme.teal)
+                    IconBadge(symbol: "calendar", color: Theme.cyan)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Shop for **\(shopRange.count)** \(shopRange.count == 1 ? "day" : "days")")
                             .contentTransition(.numericText())
@@ -158,7 +158,7 @@ private struct DayStrip: View {
                                 Text(date.formatted(.dateTime.day()))
                                     .font(.system(.title3, design: .rounded).weight(.bold))
                                 Circle()
-                                    .fill(allEaten(index) ? Theme.green : .clear)
+                                    .fill(allEaten(index) ? Theme.success : .clear)
                                     .frame(width: 6, height: 6)
                             }
                             .frame(width: 58, height: 72)
@@ -231,7 +231,7 @@ private struct DayProgressCard: View {
         .foregroundStyle(.white)
         .padding(18)
         .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-        .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
+        .shadow(color: Theme.blue.opacity(0.3), radius: 14, y: 8)
     }
 }
 
@@ -281,14 +281,14 @@ private struct MealSection: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.white)
                             .frame(width: 20, height: 20)
-                            .background(Theme.teal, in: Circle())
+                            .background(Theme.cyan, in: Circle())
                         Text(step).font(.subheadline)
                     }
                 }
             } label: {
                 Label("How to make it", systemImage: "frying.pan")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.teal)
+                    .foregroundStyle(Theme.cyan)
             }
 
             if isCurrent {
@@ -299,7 +299,7 @@ private struct MealSection: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
-                        .foregroundStyle(eaten ? Theme.green : Color.accentColor)
+                        .foregroundStyle(eaten ? Theme.success : Color.accentColor)
                 }
                 .sensoryFeedback(.success, trigger: eaten)
             }

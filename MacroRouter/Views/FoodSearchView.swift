@@ -45,7 +45,7 @@ struct FoodSearchView: View {
                                 Spacer(minLength: 4)
                                 Image(systemName: added ? "checkmark.circle.fill" : "plus.circle.fill")
                                     .font(.title2)
-                                    .foregroundStyle(added ? AnyShapeStyle(Theme.green) : AnyShapeStyle(Theme.brandGradient))
+                                    .foregroundStyle(added ? AnyShapeStyle(Theme.success) : AnyShapeStyle(Theme.brandGradient))
                                     .symbolEffect(.bounce, value: added)
                             }
                         }

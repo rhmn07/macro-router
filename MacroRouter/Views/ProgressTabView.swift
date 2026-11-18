@@ -29,10 +29,10 @@ struct ProgressTabView: View {
                     Section {
                         Chart(app.weights) { entry in
                             LineMark(x: .value("Date", entry.date), y: .value("Weight", display(entry.kg)))
-                                .foregroundStyle(Theme.green.gradient)
+                                .foregroundStyle(Theme.blue.gradient)
                                 .interpolationMethod(.catmullRom)
                             PointMark(x: .value("Date", entry.date), y: .value("Weight", display(entry.kg)))
-                                .foregroundStyle(Theme.teal)
+                                .foregroundStyle(Theme.cyan)
                                 .symbolSize(30)
                         }
                         .chartYScale(domain: .automatic(includesZero: false))
@@ -144,7 +144,7 @@ private struct WeightHero: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-        .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
+        .shadow(color: Theme.blue.opacity(0.3), radius: 14, y: 8)
     }
 }
 
@@ -165,11 +165,11 @@ private struct CheckInCard: View {
                 if checkIn.isOnTrack {
                     Label("On track. Keep your current targets.", systemImage: "checkmark.seal.fill")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.green)
+                        .foregroundStyle(Theme.success)
                 } else if applied {
                     Label("Targets updated. Re-plan your week to use them.", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.green)
+                        .foregroundStyle(Theme.success)
                 } else {
                     let change = checkIn.calorieChange
                     Text("Suggestion: eat \(abs(change)) kcal \(change < 0 ? "less" : "more") a day (\(app.data.targets.calories.formatted()) → \((app.data.targets.calories + change).formatted()) kcal). Carbs change; protein and fat stay the same.")
@@ -181,7 +181,7 @@ private struct CheckInCard: View {
                         Text("Apply new targets").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.green)
+                    .tint(Theme.blue)
                 }
             }
             .padding(.vertical, 4)

@@ -36,6 +36,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
+        # The app is always dark, whatever the phone's appearance setting.
+        UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         USDA_API_KEY: $(USDA_API_KEY)
         NSHealthShareUsageDescription: Macro Router reads your weight from Apple Health to track progress and suggest calorie changes.

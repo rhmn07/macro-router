@@ -3,14 +3,20 @@ import MacroCore
 
 /// Shared colors, gradients and small building blocks used across the app.
 enum Theme {
-    static let green = Color(red: 0.13, green: 0.70, blue: 0.42)
-    static let teal = Color(red: 0.06, green: 0.62, blue: 0.66)
+    /// Brand colors.
+    static let blue = Color(red: 0.16, green: 0.43, blue: 0.96)
+    static let cyan = Color(red: 0.04, green: 0.64, blue: 0.90)
+    /// "Good / done": within target, saved, eaten, on track.
+    static let success = Color(red: 0.16, green: 0.72, blue: 0.45)
 
     /// The app's signature gradient: buttons, hero cards, the login screen.
-    static let brandGradient = LinearGradient(colors: [green, teal],
+    static let brandGradient = LinearGradient(colors: [blue, cyan],
                                               startPoint: .topLeading, endPoint: .bottomTrailing)
 
     static let cornerRadius: CGFloat = 18
+
+    /// Near-black with a hint of blue, behind every screen.
+    static let background = Color(red: 0.03, green: 0.04, blue: 0.065)
 }
 
 // MARK: - Macro colors
@@ -20,7 +26,7 @@ extension MacroKind {
         switch self {
         case .protein: return Color(red: 0.95, green: 0.35, blue: 0.40)   // coral
         case .carbs: return Color(red: 0.97, green: 0.64, blue: 0.11)     // amber
-        case .fat: return Color(red: 0.27, green: 0.53, blue: 0.97)       // blue
+        case .fat: return Color(red: 0.18, green: 0.80, blue: 0.62)       // mint (blue is the brand color)
         case .calories: return Color(red: 0.56, green: 0.39, blue: 0.95)  // violet
         }
     }
@@ -90,10 +96,11 @@ extension Ingredient {
 struct ThemedBackground: View {
     var body: some View {
         ZStack(alignment: .top) {
-            Color(.systemGroupedBackground)
-            LinearGradient(colors: [Theme.green.opacity(0.22), Theme.teal.opacity(0.08), .clear],
+            Theme.background
+            // Soft blue glow at the top of the screen.
+            LinearGradient(colors: [Theme.blue.opacity(0.28), Theme.cyan.opacity(0.10), .clear],
                            startPoint: .top, endPoint: .bottom)
-                .frame(height: 380)
+                .frame(height: 420)
         }
         .ignoresSafeArea()
     }
@@ -122,7 +129,7 @@ struct GradientButtonStyle: ButtonStyle {
             .background {
                 Capsule().fill(isEnabled ? AnyShapeStyle(Theme.brandGradient) : AnyShapeStyle(Color.gray.opacity(0.45)))
             }
-            .shadow(color: isEnabled ? Theme.green.opacity(0.35) : .clear, radius: 10, y: 5)
+            .shadow(color: isEnabled ? Theme.blue.opacity(0.35) : .clear, radius: 10, y: 5)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }

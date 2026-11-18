@@ -19,7 +19,7 @@ struct TargetsView: View {
                 Section {
                     Button { showingRecalculate = true } label: {
                         HStack(spacing: 12) {
-                            IconBadge(symbol: "wand.and.stars", color: Theme.green)
+                            IconBadge(symbol: "wand.and.stars", color: Theme.blue)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("Recalculate from my stats").foregroundStyle(Color(.label))
                                 Text(statsSummary).font(.caption).foregroundStyle(Color(.secondaryLabel))
@@ -213,7 +213,7 @@ private struct TargetsHero: View {
                 .padding(14)
                 .opacity(0.9)
         }
-        .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
+        .shadow(color: Theme.blue.opacity(0.3), radius: 14, y: 8)
     }
 }
 
@@ -233,7 +233,7 @@ private struct AccountSection: View {
         Section("Account") {
             if let user = app.auth.user {
                 HStack(spacing: 12) {
-                    IconBadge(symbol: "person.fill", color: Theme.teal)
+                    IconBadge(symbol: "person.fill", color: Theme.cyan)
                     LabeledContent("Signed in", value: user.email ?? "Account")
                 }
                 Button("Sign out", role: .destructive) { app.signOut() }

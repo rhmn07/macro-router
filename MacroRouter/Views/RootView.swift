@@ -18,7 +18,7 @@ struct RootView: View {
         .overlay {
             if app.isLoading {
                 ProgressView("Syncing…")
-                    .tint(Theme.green)
+                    .tint(Theme.blue)
                     .padding(20)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
                     .shadow(color: .black.opacity(0.1), radius: 12, y: 6)
@@ -55,6 +55,6 @@ struct MainTabView: View {
                 .tabItem { Label("History", systemImage: "clock.fill") }
                 .tag(AppTab.history)
         }
-        .tint(Theme.green)
+        .tint(Theme.blue)
     }
 }

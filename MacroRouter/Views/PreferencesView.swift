@@ -41,7 +41,7 @@ struct PreferencesView: View {
                             if settings.mealSizes == size {
                                 Image(systemName: "checkmark")
                                     .font(.body.weight(.semibold))
-                                    .foregroundStyle(Theme.green)
+                                    .foregroundStyle(Theme.blue)
                             }
                         }
                         .contentShape(Rectangle())

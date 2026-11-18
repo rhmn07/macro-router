@@ -72,8 +72,8 @@ struct IngredientEditorView: View {
                     Text("Copy these from the nutrition label's “per 100 g” column. Leave calories empty to calculate them from the macros. For shopping, use the as-purchased (raw/dry) values.")
                 }
                 Section {
-                    numberField("Minimum", unit: "g/day", value: $minGrams, symbol: "arrow.down.to.line", color: Theme.teal, placeholder: "none")
-                    numberField("Maximum", unit: "g/day", value: $maxGrams, symbol: "arrow.up.to.line", color: Theme.teal, placeholder: "none")
+                    numberField("Minimum", unit: "g/day", value: $minGrams, symbol: "arrow.down.to.line", color: Theme.cyan, placeholder: "none")
+                    numberField("Maximum", unit: "g/day", value: $maxGrams, symbol: "arrow.up.to.line", color: Theme.cyan, placeholder: "none")
                 } header: {
                     Text("Daily portion limits (optional)")
                 } footer: {
@@ -104,13 +104,13 @@ struct IngredientEditorView: View {
                         ForEach(PackageSize.commonUnits, id: \.self) { Text($0.capitalized).tag(String?.some($0)) }
                     } label: {
                         HStack(spacing: 12) {
-                            IconBadge(symbol: "bag.fill", color: Theme.green, size: 28)
+                            IconBadge(symbol: "bag.fill", color: Theme.blue, size: 28)
                             Text("Sold as")
                         }
                     }
                     if let unit = shownPackage?.unit {
                         numberField(unit == "dozen" ? "Weight per dozen" : unit == "whole" ? "Weight of one" : "Weight per \(unit)",
-                                    unit: "g", value: gramsBinding, symbol: "scalemass.fill", color: Theme.teal,
+                                    unit: "g", value: gramsBinding, symbol: "scalemass.fill", color: Theme.cyan,
                                     placeholder: shownPackage.map { Int($0.grams).formatted() } ?? "0")
                     }
                 } header: {

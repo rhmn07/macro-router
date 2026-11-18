@@ -14,7 +14,7 @@ struct CurrentPlanView: View {
                                 if app.isSaved(week) {
                                     Label("Saved", systemImage: "checkmark.circle.fill")
                                         .labelStyle(.titleAndIcon)
-                                        .foregroundStyle(Theme.green)
+                                        .foregroundStyle(Theme.success)
                                 } else {
                                     Button { withAnimation { app.save(week) } } label: {
                                         Label("Save", systemImage: "bookmark.fill")
@@ -206,7 +206,7 @@ struct PlanContent: View {
             Section {
                 Stepper(value: $days, in: 1...14) {
                     HStack(spacing: 12) {
-                        IconBadge(symbol: "calendar", color: Theme.teal)
+                        IconBadge(symbol: "calendar", color: Theme.cyan)
                         Text("Shop for **\(days)** \(days == 1 ? "day" : "days")")
                             .contentTransition(.numericText())
                     }
@@ -320,7 +320,7 @@ struct GroceryRow: View {
             Spacer(minLength: 4)
             Text(item.quantityText)
                 .font(.body.monospacedDigit().bold())
-                .foregroundStyle(Theme.teal)
+                .foregroundStyle(Theme.cyan)
                 .contentTransition(.numericText())
                 .fixedSize()
         }
@@ -350,7 +350,7 @@ struct PlanSummaryCard: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background((plan.isWithinMargin ? Theme.green : Color.orange).gradient, in: Capsule())
+            .background((plan.isWithinMargin ? Theme.success : Color.orange).gradient, in: Capsule())
 
             HStack(spacing: 10) {
                 ForEach(plan.results) { result in
@@ -365,10 +365,10 @@ struct PlanSummaryCard: View {
                         if let error = result.relativeError {
                             Text(error.formatted(.percent.precision(.fractionLength(0)).sign(strategy: .always())))
                                 .font(.caption2.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(result.isWithinMargin ? Theme.green : .orange)
+                                .foregroundStyle(result.isWithinMargin ? Theme.success : .orange)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background((result.isWithinMargin ? Theme.green : Color.orange).opacity(0.14), in: Capsule())
+                                .background((result.isWithinMargin ? Theme.success : Color.orange).opacity(0.14), in: Capsule())
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -382,7 +382,7 @@ struct PlanSummaryCard: View {
         .padding(.vertical, 18)
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
-        .background(.background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 12, y: 6)
     }
 }
@@ -440,7 +440,7 @@ struct StatusBadge: View {
 
     var body: some View {
         Image(systemName: ok ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-            .foregroundStyle(ok ? Theme.green : .orange)
+            .foregroundStyle(ok ? Theme.success : .orange)
             .accessibilityLabel(ok ? "Within target" : "Off target")
     }
 }

@@ -242,7 +242,7 @@ struct OnboardingView: View {
                 }
                 .id(Field.age)
                 Divider().padding(.leading, 54)
-                InputRow(symbol: "ruler.fill", color: Theme.teal, title: "Height") {
+                InputRow(symbol: "ruler.fill", color: Theme.cyan, title: "Height") {
                     if usesMetric {
                         NumberField(placeholder: "175", value: $heightCm, unit: "cm", field: .heightCm, focused: $focused)
                     } else {
@@ -261,7 +261,7 @@ struct OnboardingView: View {
                 .id(Field.weight)
             }
             .padding(.vertical, 4)
-            .background(.background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
 
             if let bodyProblem {
                 Label(bodyProblem, systemImage: "exclamationmark.circle.fill")
@@ -277,7 +277,7 @@ struct OnboardingView: View {
                       subtitle: "Count workouts and how much you move during the day.")
             ForEach(ActivityLevel.allCases) { option in
                 OptionCard(emoji: option.emoji, title: option.displayName, detail: option.detail,
-                           color: Theme.teal, isSelected: activity == option) {
+                           color: Theme.cyan, isSelected: activity == option) {
                     activity = option
                 }
             }
@@ -304,7 +304,7 @@ struct OnboardingView: View {
                 }
             }
             .padding(.vertical, 4)
-            .background(.background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
 
             if targets.calories > 0 && !targets.isConsistent() {
                 Label("Your macros add up to \(targets.impliedCalories) kcal, not \(targets.calories) kcal.",
@@ -317,7 +317,7 @@ struct OnboardingView: View {
                 if let profile { withAnimation { targets = profile.recommendedTargets() } }
             }
             .font(.subheadline.weight(.semibold))
-            .tint(Theme.green)
+            .tint(Theme.blue)
 
             Text("These are estimates from the Mifflin-St Jeor equation, not medical advice. Check with a doctor or dietitian if you have a health condition, are pregnant, or are under 18.")
                 .font(.caption)
@@ -384,7 +384,7 @@ private extension WeightGoal {
     var color: Color {
         switch self {
         case .lose: return MacroKind.protein.color
-        case .maintain: return Theme.green
+        case .maintain: return Theme.blue
         case .gain: return MacroKind.fat.color
         }
     }
@@ -442,7 +442,7 @@ private struct OptionCard: View {
                     .foregroundStyle(isSelected ? AnyShapeStyle(color) : AnyShapeStyle(Color.secondary.opacity(0.4)))
             }
             .padding(14)
-            .background(.background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                     .strokeBorder(isSelected ? color : .clear, lineWidth: 2)
@@ -476,7 +476,7 @@ private struct SexCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(.background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                     .strokeBorder(isSelected ? color : .clear, lineWidth: 2)
@@ -598,7 +598,7 @@ private struct ResultHero: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-        .shadow(color: Theme.green.opacity(0.3), radius: 14, y: 8)
+        .shadow(color: Theme.blue.opacity(0.3), radius: 14, y: 8)
         .animation(.snappy, value: targets)
     }
 }

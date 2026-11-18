@@ -66,7 +66,7 @@ struct PantryView: View {
 
                 Section {
                     Button { showingSearch = true } label: {
-                        ActionRow(title: "Search foods", subtitle: "USDA database", symbol: "magnifyingglass", color: Theme.teal)
+                        ActionRow(title: "Search foods", subtitle: "USDA database", symbol: "magnifyingglass", color: Theme.cyan)
                     }
                     Button { editing = .new } label: {
                         ActionRow(title: "Add a custom food", subtitle: "From a nutrition label", symbol: "square.and.pencil", color: MacroKind.calories.color)
@@ -222,7 +222,7 @@ struct IngredientRow: View {
                     if let limits = MacroFormat.limits(ingredient) {
                         Label(limits, systemImage: "ruler")
                             .font(.caption)
-                            .foregroundStyle(Theme.teal)
+                            .foregroundStyle(Theme.cyan)
                     }
                 }
                 Spacer(minLength: 4)
