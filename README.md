@@ -2,6 +2,19 @@
 
 Tell it your daily macros and the foods you want to eat. It calculates the exact gram weights to prep each day and a multi-day grocery list.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/plan.png" width="230" alt="Week plan with today's calories"><br><sub>Week plan</sub></td>
+    <td align="center"><img src="docs/screenshots/meal.png" width="230" alt="A planned lunch with portions and cooking steps"><br><sub>Meals and cooking steps</sub></td>
+    <td align="center"><img src="docs/screenshots/groceries.png" width="230" alt="Macro rings and grocery list in packs"><br><sub>Macros and grocery list</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/targets.png" width="230" alt="Daily targets"><br><sub>Targets</sub></td>
+    <td align="center"><img src="docs/screenshots/pantry.png" width="230" alt="Pantry of foods to pick from"><br><sub>Pantry</sub></td>
+    <td align="center"><img src="docs/screenshots/progress.png" width="230" alt="Weight trend and calorie check-in"><br><sub>Progress</sub></td>
+  </tr>
+</table>
+
 - **SwiftUI**, iOS 17+
 - **On-device optimizer** (`Packages/MacroCore`): box-constrained weighted least squares. Every macro is measured as relative error, and you can set optional min/max grams per food. It returns the best possible plan even when the selected foods can't hit the targets exactly, and reports which macros miss the ±5% margin.
 - **A week at a time**: plans 7 days; lunch and dinner proteins and carbs rotate from day to day. Tap "I ate it" after a meal to track today's calories, or swipe a food to drop it for that day and re-plan the rest.
